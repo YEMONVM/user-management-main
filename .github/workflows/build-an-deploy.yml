@@ -11,27 +11,69 @@ jobs:
     runs-on: self-hosted
 
     steps:
+      # Checkout code
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
+      # Set up JDK 21
       - name: Set up JDK 21
         uses: actions/setup-java@v1
         with:
-          java-version: 17
+          java-version: 21
 
+      # Setup Maven
       - name: Setup Maven
-        shell: powershell
         run: |
-          Invoke-WebRequest -Uri "https://downloads.apache.org/maven/maven-3/3.8.8/binaries/apache-maven-3.8.8-bin.zip" -OutFile "maven.zip"
-          Expand-Archive -Path "maven.zip" -DestinationPath "$env:USERPROFILE\maven" -Force
-          echo "MAVEN_HOME=$env:USERPROFILE\maven\apache-maven-3.8.8" >> $env:GITHUB_ENV
-          echo "$env:USERPROFILE\maven\apache-maven-3.8.8\bin" >> $env:GITHUB_PATH
+          curl -O https://downloads.apache.org/maven/maven-3/3.8.8/binaries/apache-maven-3.8.8-bin.tar.gz
+          tar -xvzf apache-maven-3.8.8-bin.tar.gz
+          mv apache-maven-3.8.8 $HOME/maven
+          echo "MAVEN_HOME=$HOME/maven/apache-maven-3.8.8" >> $GITHUB_ENV
+          echo "$HOME/maven/apache-maven-3.8.8/bin" >> $GITHUB_PATH
 
+      # Build and analyze with SonarQube
       - name: Build and analyze
         env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN}}
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL}}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
         run: mvn -B verify sonar:sonar -Dsonar.project.settings=./sonar-project.properties
-        shell: cmd
+
+      # Build Docker image
+      - name: Build Docker image
+        run: docker build -t carikk/quality-gate:latest .
+
+      # Log in to DockerHub
+      - name: Log in to DockerHub
+        run: |
+          echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+      # Push Docker image
+      - name: Push Docker image
+        run: docker push carikk/quality-gate:latest
+
+      # Set up kubeconfig
+      - name: Set up kubeconfig
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBECONFIG_CONTENT }}" > $HOME/.kube/config
+          kubectl config use-context docker-desktop
+          kubectl config set-context --current --namespace=ensakh
+
+      # Verify Kubernetes context
+      - name: Verify Kubernetes context
+        run: |
+          kubectl config current-context
+          kubectl get namespaces
+
+      # Deploy to Kubernetes
+      - name: Deploy to kube
+        run: kubectl apply -f k8s/deployment.yaml
+
+      # Verify Deployment
+      - name: Verify Deployment
+        run: |
+          kubectl config current-context
+          kubectl get nodes
+          kubectl get namespaces
+          kubectl get pods
