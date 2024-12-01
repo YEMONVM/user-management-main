@@ -44,36 +44,36 @@ jobs:
         run: docker build -t carikk/quality-gate:latest .
 
       # Log in to DockerHub
-      - name: Log in to DockerHub
-        run: |
-          echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+      #- name: Log in to DockerHub
+      #  run: |
+      #    echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
       # Push Docker image
-      - name: Push Docker image
-        run: docker push carikk/quality-gate:latest
+      #- name: Push Docker image
+      #  run: docker push carikk/quality-gate:latest
 
       # Set up kubeconfig
-      - name: Set up kubeconfig
-        run: |
-          mkdir -p $HOME/.kube
-          echo "${{ secrets.KUBECONFIG_CONTENT }}" > $HOME/.kube/config
-          kubectl config use-context docker-desktop
-          kubectl config set-context --current --namespace=ensakh
+      #- name: Set up kubeconfig
+      #  run: |
+      #    mkdir -p $HOME/.kube
+      #    echo "${{ secrets.KUBECONFIG_CONTENT }}" > $HOME/.kube/config
+      #    kubectl config use-context docker-desktop
+      #    kubectl config set-context --current --namespace=ensakh
 
       # Verify Kubernetes context
-      - name: Verify Kubernetes context
-        run: |
-          kubectl config current-context
-          kubectl get namespaces
+      #- name: Verify Kubernetes context
+      #  run: |
+      #    kubectl config current-context
+      #    kubectl get namespaces
 
       # Deploy to Kubernetes
-      - name: Deploy to kube
-        run: kubectl apply -f k8s/deployment.yaml
+      #- name: Deploy to kube
+      #  run: kubectl apply -f k8s/deployment.yaml
 
       # Verify Deployment
-      - name: Verify Deployment
-        run: |
-          kubectl config current-context
-          kubectl get nodes
-          kubectl get namespaces
-          kubectl get pods
+      #- name: Verify Deployment
+      #  run: |
+      #    kubectl config current-context
+      #    kubectl get nodes
+      #    kubectl get namespaces
+      #    kubectl get pods
